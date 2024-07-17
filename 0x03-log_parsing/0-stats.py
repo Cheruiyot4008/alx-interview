@@ -1,56 +1,50 @@
 
 #!/usr/bin/python3
-"""
-Script that reads stdin line by line and computes metrics.
-"""
+# This is a script that reads stdin line by line and computes metrics
+
 import sys
 
+# We initialize a dictionary to keep track of the status codes and their counts
+status_codes = ['200', '301', '400', '401', '403', '404', '405', '500']
+cache = {code: 0 for code in status_codes}
 
-def print_status(dict, size):
-    """
-    Args:
-        status_dict (dict): Dictionary contains the status codes and
-        their respective counts.
-        file_size (int): The total file size.
-
-    Prints:
-        The file size and the number of lines for each status code
-    """
-    print("File size: {}".format(size))
-    for key in sorted(dict.keys()):
-        if dict[key] != 0:
-            print("{}: {}".format(key, dict[key]))
-
-
-status_dict = {'200': 0, '301': 0, '400': 0, '401': 0, '403': 0,
-               '404': 0, '405': 0, '500': 0}
-
-file_size = 0  # Total file size counter
-line_count = 0  # Number of lines read from input
+# We also initialize variables to keep track of the total file size and the line counter
+total_size = 0
+counter = 0
 
 try:
+    # We read from stdin line by line
     for line in sys.stdin:
-        if line_count != 0 and line_count % 10 == 0:
-            # Print metrics every 10 lines
-            print_status(status_dict, file_size)
+        # We split the line into a list of words
+        line_list = line.split(" ")
+        # If the line does not contain at least 7 words, we skip it
+        if len(line_list) < 7:
+            continue
+        # We extract the size and the status code from the line
+        size = line_list[-1]
+        code = line_list[-2]
+        # If the status code is in our cache, we increment its count and add the size to the total size
+        if code in cache:
+            cache[code] += 1
+            total_size += int(size)
+            counter += 1
 
-        elem = line.split(" ")  # Split the line by space
-        line_count += 1
+        # After every 10 lines, we print the statistics
+        if counter == 10:
+            print("File size: {}".format(total_size))
+            for code in sorted(cache.keys()):
+                if cache[code] > 0:
+                    print("{}: {}".format(code, cache[code]))
+            counter = 0
 
-        try:
-            # Get file size from the last element
-            file_size += int(elem[-1])
-        except:
-            pass
+# We handle keyboard interruptions gracefully
+except KeyboardInterrupt:
+    pass
 
-        try:
-            # Get HTTP status code from the second-to-last element
-            if elem[-2] in status_dict.keys():
-                status_dict[elem[-2]] += 1
-        except:
-            pass
-    print_status(status_dict, file_size)  # print final metrics
+# Finally, we print the statistics one last time
+finally:
+    print("File size: {}".format(total_size))
+    for code in sorted(cache.keys()):
+        if cache[code] > 0:
+            print("{}: {}".format(code, cache[code]))
 
-except KeyboardInterrupt:   # Handle KeyboardInterrupt exception
-    print_status(status_dict, file_size)
-    raise
