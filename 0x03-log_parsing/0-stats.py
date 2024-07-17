@@ -1,73 +1,59 @@
 
 #!/usr/bin/python3
+
+
 """
-Processing stdin line by line and calculating metrics.
-
-This script reads input lines from stdin, parses them,
-and computes metrics such as file size and HTTP status code occurrences.
-
-It prints statistics in ascending order,
-including the file size and the count of each HTTP status code encountered.
-
-Usage:
-    ./0-generator.py | ./0-stats.py
+This module holds a simple module to do log
+parsing. Given a input of log files, extract some
+usefull information and print it to standard output
 """
 
+import sys
+import re
+def check_log_format(log_string):
+    regex_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \[.*\] "GET \/projects\/260 HTTP\/1\.1" \d{3} \d+'
+    return re.match(regex_pattern, log_string)
 
-if __name__ == "__main__":
-    import sys
 
-    status_code_counts = {
-        "200": 0,
-        "301": 0,
-        "400": 0,
-        "401": 0,
-        "403": 0,
-        "404": 0,
-        "405": 0,
-        "500": 0,
-    }
-    log_entry_count = 1
-    file_size = 0
+def print_to_stdout(**kwargs):
+    """
+    A simple helper function to print
+    the values to standard output
+    """
+    for key in kwargs.keys():
+        if not isinstance(kwargs.get(key), dict):
+            # Means this is not a dictionary of dictionaries
+            # So Its the file size
+            print("File Size {}".format(kwargs.get(key)))
+        else:
+            for nested_k, nested_v in key.items():
+                print(f"{nested_k}: {nested_v}")
 
-    def parse_line(log_entry):
-        """
-        Read, parse, and extract relevant data from a given log entry.
 
-        Args:
-            log_entry (str): A log entry to be parsed.
-
-        Returns:
-            int: The size of the file indicated in the log entry.
-        """
+def read_and_analyze_log_files():
+    while True:
         try:
-            parsed_entry = log_entry.split()
-            status_code = parsed_entry[-2]
-            if status_code in status_code_counts.keys():
-                status_code_counts[status_code] += 1
-            return int(parsed_entry[-1])
-        except Exception:
-            return 0
+            status_codes = {
+                "200": 0,
+                "301": 0,
+                "400": 0,
+                "401": 0,
+                "403": 0,
+                "404": 0,
+                "405": 0,
+                "500": 0
 
-    def print_stats():
-        """
-        Print statistics in ascending order based on HTTP status codes.
-
-        Prints the total file size and the log_entry_count
-        of each HTTP status code encountered.
-        """
-        print(f"File size: {file_size}")
-        for key in sorted(status_code_counts.keys()):
-            if status_code_counts[key]:
-                print(f"{key}: {status_code_counts[key]}")
-
-    try:
-        for log_entry in sys.stdin:
-            file_size += parse_line(log_entry)
-            if log_entry_count % 10 == 0:
-                print_stats()
-            log_entry_count += 1
-    except KeyboardInterrupt:
-        print_stats()
-        raise
-    print_stats()
+            }
+            total_size = 0
+            for time in range(11):
+                log_info = input("").strip()
+                if check_log_format(log_info):
+                    log_info_list = log_info.split(" ")
+                    f_size = log_info_list[-1]
+                    s_code = log_info_list[-2]
+                    status_codes[s_code] = status_codes.get(s_code) + 1
+                    total_size += int(f_size)
+                    sorted_keys_dict = {code: status_codes[code] for code in sorted(status_codes)}
+            print_to_stdout(codes=sorted_keys_dict, size = total_size)
+        except KeyboardInterrupt:
+            print_to_stdout(codes=sorted_keys_dict, size = total_size)
