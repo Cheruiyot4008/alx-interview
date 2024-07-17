@@ -1,51 +1,56 @@
 
 #!/usr/bin/python3
 """
-log parsing
+Script that reads stdin line by line and computes metrics.
 """
-
 import sys
-import re
 
 
-def output(log: dict) -> None:
+def print_status(dict, size):
     """
-    helper function to display stats
+    Args:
+        status_dict (dict): Dictionary contains the status codes and
+        their respective counts.
+        file_size (int): The total file size.
+
+    Prints:
+        The file size and the number of lines for each status code
     """
-    print("File size: {}".format(log["file_size"]))
-    for code in sorted(log["code_frequency"]):
-        if log["code_frequency"][code]:
-            print("{}: {}".format(code, log["code_frequency"][code]))
+    print("File size: {}".format(size))
+    for key in sorted(dict.keys()):
+        if dict[key] != 0:
+            print("{}: {}".format(key, dict[key]))
 
 
-if __name__ == "__main__":
-    regex = re.compile(
-    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - \[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d+\] "GET /projects/260 HTTP/1.1" (.{3}) (\d+)')  # nopep8
+status_dict = {'200': 0, '301': 0, '400': 0, '401': 0, '403': 0,
+               '404': 0, '405': 0, '500': 0}
 
-    line_count = 0
-    log = {}
-    log["file_size"] = 0
-    log["code_frequency"] = {
-        str(code): 0 for code in [
-            200, 301, 400, 401, 403, 404, 405, 500]}
+file_size = 0  # Total file size counter
+line_count = 0  # Number of lines read from input
 
-    try:
-        for line in sys.stdin:
-            line = line.strip()
-            match = regex.fullmatch(line)
-            if (match):
-                line_count += 1
-                code = match.group(1)
-                file_size = int(match.group(2))
+try:
+    for line in sys.stdin:
+        if line_count != 0 and line_count % 10 == 0:
+            # Print metrics every 10 lines
+            print_status(status_dict, file_size)
 
-                # File size
-                log["file_size"] += file_size
+        elem = line.split(" ")  # Split the line by space
+        line_count += 1
 
-                # status code
-                if (code.isdecimal()):
-                    log["code_frequency"][code] += 1
+        try:
+            # Get file size from the last element
+            file_size += int(elem[-1])
+        except:
+            pass
 
-                if (line_count % 10 == 0):
-                    output(log)
-    finally:
-        output(log)
+        try:
+            # Get HTTP status code from the second-to-last element
+            if elem[-2] in status_dict.keys():
+                status_dict[elem[-2]] += 1
+        except:
+            pass
+    print_status(status_dict, file_size)  # print final metrics
+
+except KeyboardInterrupt:   # Handle KeyboardInterrupt exception
+    print_status(status_dict, file_size)
+    raise
